@@ -399,6 +399,12 @@ function App() {
           </button>
           {formMessage && <p className="form-message">{formMessage}</p>}
         </form>
+        <p className="footer-credit">
+          Designed by Dawit -{' '}
+          <a href="https://dafitech.org" target="_blank" rel="noreferrer">
+            dafitech.org
+          </a>
+        </p>
       </footer>
     </div>
   )
