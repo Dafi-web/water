@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">Tsegay Brhane WWC Logo</title>
+  <desc id="desc">Circular logo with TB initials and water wave</desc>
+  <defs>
+    <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0066cc"/>
+      <stop offset="100%" stop-color="#0d9488"/>
+    </linearGradient>
+  </defs>
+  <circle cx="64" cy="64" r="60" fill="url(#g1)"/>
+  <path d="M20 77c10 0 10 7 20 7s10-7 20-7 10 7 20 7 10-7 20-7" fill="none" stroke="#c9f5ef" stroke-width="6" stroke-linecap="round"/>
+  <text x="64" y="60" text-anchor="middle" font-size="34" font-family="Arial, sans-serif" font-weight="700" fill="#fff">TB</text>
+  <text x="64" y="103" text-anchor="middle" font-size="14" font-family="Arial, sans-serif" fill="#fff">WWC</text>
+</svg>
