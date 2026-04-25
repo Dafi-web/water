@@ -128,6 +128,7 @@ function App() {
   const [theme, setTheme] = useState(() => localStorage.getItem('tb-theme') || 'light')
   const [formMessage, setFormMessage] = useState('')
   const [isSending, setIsSending] = useState(false)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
@@ -192,6 +193,10 @@ function App() {
     setTheme((currentTheme) => (currentTheme === 'light' ? 'dark' : 'light'))
   }
 
+  const toggleMobileMenu = () => {
+    setIsMobileMenuOpen((current) => !current)
+  }
+
   return (
     <div className="site">
       <header className="topbar">
@@ -202,13 +207,28 @@ function App() {
             <span>Water Works and Construction</span>
           </div>
         </div>
-        <nav aria-label="Main navigation">
-          {navItems.map((item) => (
-            <a key={item.label} href={item.href}>
-              {item.label}
-            </a>
-          ))}
-        </nav>
+        <div className="topbar-actions">
+          <button
+            className="menu-toggle"
+            type="button"
+            onClick={toggleMobileMenu}
+            aria-expanded={isMobileMenuOpen}
+            aria-controls="mobile-main-nav"
+          >
+            Menu
+          </button>
+          <nav
+            id="mobile-main-nav"
+            className={isMobileMenuOpen ? 'nav-links nav-open' : 'nav-links'}
+            aria-label="Main navigation"
+          >
+            {navItems.map((item) => (
+              <a key={item.label} href={item.href} onClick={() => setIsMobileMenuOpen(false)}>
+                {item.label}
+              </a>
+            ))}
+          </nav>
+        </div>
         <button className="theme-toggle" onClick={toggleTheme} type="button">
           {theme === 'light' ? 'Dark' : 'Light'} mode
         </button>
