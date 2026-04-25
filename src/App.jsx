@@ -153,6 +153,17 @@ function App() {
     return () => observer.disconnect()
   }, [])
 
+  useEffect(() => {
+    const closeMenuOnResize = () => {
+      if (window.innerWidth > 1020) {
+        setIsMobileMenuOpen(false)
+      }
+    }
+
+    window.addEventListener('resize', closeMenuOnResize)
+    return () => window.removeEventListener('resize', closeMenuOnResize)
+  }, [])
+
   const handleSubmit = async (event) => {
     event.preventDefault()
     setFormMessage('')
@@ -214,8 +225,11 @@ function App() {
             onClick={toggleMobileMenu}
             aria-expanded={isMobileMenuOpen}
             aria-controls="mobile-main-nav"
+            aria-label={isMobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
           >
-            Menu
+            <span className={isMobileMenuOpen ? 'menu-bar open' : 'menu-bar'} />
+            <span className={isMobileMenuOpen ? 'menu-bar open' : 'menu-bar'} />
+            <span className={isMobileMenuOpen ? 'menu-bar open' : 'menu-bar'} />
           </button>
           <nav
             id="mobile-main-nav"

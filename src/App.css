@@ -138,13 +138,43 @@ a {
 
 .menu-toggle {
   display: none;
-  border: 1px solid var(--line);
-  background: var(--surface);
+  border: 1px solid color-mix(in srgb, var(--line) 78%, transparent);
+  background: color-mix(in srgb, var(--surface) 86%, transparent);
   color: var(--text);
-  border-radius: 0.65rem;
-  padding: 0.45rem 0.85rem;
-  font-weight: 600;
+  border-radius: 0.8rem;
+  width: 2.8rem;
+  height: 2.5rem;
+  padding: 0.45rem;
+  gap: 0.22rem;
   cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.menu-toggle:hover {
+  background: color-mix(in srgb, var(--surface-alt) 88%, transparent);
+}
+
+.menu-bar {
+  width: 1.15rem;
+  height: 2px;
+  border-radius: 99px;
+  background: var(--text);
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.menu-toggle[aria-expanded='true'] .menu-bar:nth-child(1) {
+  transform: translateY(6px) rotate(45deg);
+}
+
+.menu-toggle[aria-expanded='true'] .menu-bar:nth-child(2) {
+  opacity: 0;
+}
+
+.menu-toggle[aria-expanded='true'] .menu-bar:nth-child(3) {
+  transform: translateY(-6px) rotate(-45deg);
 }
 
 .theme-toggle {
@@ -467,38 +497,55 @@ main,
 
   .topbar {
     padding-inline: 4vw;
-    align-items: flex-start;
-    flex-direction: column;
+    align-items: center;
+    flex-wrap: wrap;
   }
 
   .topbar-actions {
-    width: 100%;
+    width: auto;
+    margin-left: auto;
   }
 
   .menu-toggle {
     display: inline-flex;
-    align-items: center;
-    justify-content: center;
   }
 
   .nav-links {
-    display: none;
-    margin-top: 0.55rem;
+    position: absolute;
+    top: calc(100% + 0.55rem);
+    right: 0;
+    display: flex;
     width: 100%;
+    min-width: min(18rem, 88vw);
     flex-direction: column;
     background: var(--surface);
-    border: 1px solid var(--line);
-    border-radius: 0.8rem;
-    padding: 0.45rem;
+    border: 1px solid color-mix(in srgb, var(--line) 84%, transparent);
+    border-radius: 0.95rem;
+    padding: 0.5rem;
     box-shadow: var(--shadow);
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
   }
 
   .nav-links a {
     width: 100%;
+    padding: 0.65rem 0.8rem;
+    border-radius: 0.65rem;
   }
 
   .nav-links.nav-open {
-    display: flex;
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+  }
+
+  .theme-toggle {
+    margin-left: 0;
+    order: 3;
+    width: 100%;
+    margin-top: 0.55rem;
   }
 
   .section-alt,
