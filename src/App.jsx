@@ -173,7 +173,7 @@ function PublicSite() {
                 {item.label}
               </a>
             ))}
-            <a href="/admin">Admin</a>
+            <a href="#/admin">Admin</a>
           </nav>
         </div>
         <button className="theme-toggle" onClick={() => setTheme((v) => (v === 'light' ? 'dark' : 'light'))} type="button">
@@ -395,7 +395,7 @@ function AdminPage() {
           <button type="submit" className="btn btn-primary">Login</button>
         </form>
         {status && <p>{status}</p>}
-        <p><a href="/">Back to website</a></p>
+        <p><a href="#/">Back to website</a></p>
       </div>
     )
   }
@@ -405,7 +405,7 @@ function AdminPage() {
       <div className="admin-header">
         <h1>Admin Dashboard</h1>
         <div className="admin-actions">
-          <a href="/" className="btn btn-ghost">View Site</a>
+          <a href="#/" className="btn btn-ghost">View Site</a>
           <button type="button" className="btn btn-primary" onClick={logout}>Logout</button>
         </div>
       </div>
@@ -481,7 +481,8 @@ function AdminPage() {
 }
 
 function App() {
-  return window.location.pathname === '/admin' ? <AdminPage /> : <PublicSite />
+  const currentHash = window.location.hash || '#/'
+  return currentHash === '#/admin' ? <AdminPage /> : <PublicSite />
 }
 
 export default App
