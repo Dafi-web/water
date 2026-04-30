@@ -18,7 +18,27 @@ const projectRoot = path.resolve(__dirname, "..");
 const app = express();
 const port = process.env.PORT || 5000;
 
-app.use(cors());
+const defaultAllowedOrigins = [
+  "http://localhost:5173",
+  "https://water-chi-two.vercel.app",
+];
+
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(",").map((origin) => origin.trim())
+  : defaultAllowedOrigins;
+
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      return callback(new Error(`CORS blocked for origin: ${origin}`));
+    },
+    methods: ["GET", "POST", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "x-admin-key"],
+  })
+);
+app.options("*", cors());
 app.use(express.json());
 app.use("/uploads", express.static(path.join(projectRoot, "uploads")));
 

@@ -67,8 +67,18 @@ function Card({ title, items }) {
 
 function normalizeMediaUrl(url) {
   if (!url) return ''
+  if (url.startsWith('data:')) return url
   if (url.startsWith('http')) return url
   return `${apiBase}${url}`
+}
+
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result))
+    reader.onerror = () => reject(new Error('Failed to read selected file'))
+    reader.readAsDataURL(file)
+  })
 }
 
 function PublicSite() {
@@ -346,12 +356,24 @@ function AdminPage() {
     setStatus('')
 
     const formData = new FormData(event.currentTarget)
+    const mediaFile = formData.get('mediaFile')
+    const payload = {
+      title: formData.get('title'),
+      description: formData.get('description') || '',
+      mediaType: formData.get('mediaType') || 'image',
+      mediaUrl: formData.get('mediaUrl') || '',
+      mediaDataUrl: '',
+    }
+
+    if (mediaFile instanceof File && mediaFile.size > 0) {
+      payload.mediaDataUrl = await fileToDataUrl(mediaFile)
+    }
 
     try {
       const response = await fetch(`${apiBase}/api/admin/posts`, {
         method: 'POST',
-        headers: { 'x-admin-key': adminKey },
-        body: formData,
+        headers: { 'x-admin-key': adminKey, 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       })
 
       if (!response.ok) throw new Error('Create failed')
