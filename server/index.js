@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 import mongoose from "mongoose";
 import multer from "multer";
+import nodemailer from "nodemailer";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -34,10 +35,24 @@ const storage = multer.diskStorage({
   },
 });
 
-const upload = multer({
-  storage,
-  limits: { fileSize: 50 * 1024 * 1024 },
-});
+const upload = multer({ storage });
+
+function getMailTransporter() {
+  const host = process.env.SMTP_HOST;
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+
+  if (!host || !user || !pass) {
+    return null;
+  }
+
+  return nodemailer.createTransport({
+    host,
+    port: Number(process.env.SMTP_PORT || 587),
+    secure: process.env.SMTP_SECURE === "true",
+    auth: { user, pass },
+  });
+}
 
 app.get("/api/health", (_, res) => {
   res.json({ ok: true });
@@ -56,6 +71,33 @@ app.post("/api/requests", async (req, res) => {
   }
 
   const created = await Request.create({ name, phone, email, projectType, message });
+
+  const transporter = getMailTransporter();
+  const adminEmail = process.env.ADMIN_EMAIL;
+
+  if (transporter && adminEmail) {
+    try {
+      await transporter.sendMail({
+        from: process.env.SMTP_FROM || process.env.SMTP_USER,
+        to: adminEmail,
+        subject: `New Project Request - ${projectType} - ${name}`,
+        text: [
+          "You received a new request from your website.",
+          "",
+          `Name: ${name}`,
+          `Phone: ${phone}`,
+          `Email: ${email || "Not provided"}`,
+          `Project Type: ${projectType}`,
+          "",
+          "Message:",
+          message,
+        ].join("\n"),
+      });
+    } catch (error) {
+      console.error("Failed to send admin email notification", error);
+    }
+  }
+
   res.status(201).json({ id: created._id });
 });
 

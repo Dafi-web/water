@@ -481,7 +481,14 @@ function AdminPage() {
 }
 
 function App() {
-  const currentHash = window.location.hash || '#/'
+  const [currentHash, setCurrentHash] = useState(() => window.location.hash || '#/')
+
+  useEffect(() => {
+    const onHashChange = () => setCurrentHash(window.location.hash || '#/')
+    window.addEventListener('hashchange', onHashChange)
+    return () => window.removeEventListener('hashchange', onHashChange)
+  }, [])
+
   return currentHash === '#/admin' ? <AdminPage /> : <PublicSite />
 }
 
