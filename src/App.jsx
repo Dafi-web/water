@@ -1,15 +1,14 @@
-import { useEffect, useState } from 'react'
-import emailjs from '@emailjs/browser'
+import { useEffect, useMemo, useState } from 'react'
 import './App.css'
 import companyLogo from './assets/company-logo.svg'
 
 const companyName = 'Tsegay Brhane Water Works Contractor & Construction Materials Retailer'
+const apiBase = import.meta.env.VITE_API_BASE_URL || ''
 
 const navItems = [
   { label: 'About', href: '#about' },
   { label: 'Services', href: '#services' },
-  { label: 'Customers', href: '#customers' },
-  { label: 'Resources', href: '#resources' },
+  { label: 'Gallery', href: '#gallery' },
   { label: 'Contact', href: '#contact' },
 ]
 
@@ -21,10 +20,6 @@ const serviceGroups = [
       'Pipeline construction and testing',
       'Borehole and well development',
       'Water distribution networks',
-      'Potable water system implementation',
-      'Irrigation and drainage infrastructure',
-      'Dam construction and water management',
-      'River and riverside development',
     ],
   },
   {
@@ -42,55 +37,14 @@ const serviceGroups = [
       'Cement supply',
       'Sand and gravel',
       'Hollow blocks and masonry units',
-      'Reinforcement bars (rebar)',
-      'Pipes and fittings (PVC, GI, and others)',
-      'Hardware and essential building materials',
+      'Reinforcement bars and fittings',
     ],
   },
 ]
 
-const targetCustomers = [
-  'Government institutions',
-  'NGOs and development partners',
-  'Private contractors and construction firms',
-  'Individual house builders',
-  'Commercial and business clients',
-]
-
-const advantages = [
-  'Deep local market expertise in Tigray',
-  'Integrated construction and material supply services',
-  'Agile, responsive client support',
-  'Cost-effective and competitive pricing',
-  'Strong quality and reliability standards',
-]
-
-const resources = [
-  'Construction tools, power tools, and water works equipment',
-  'Transport and logistics support with trucks and pickups',
-  'Experienced engineers, supervisors, skilled labor, and support workers',
-]
-
-const objectives = [
-  'Expand operations in Tigray and nearby regions',
-  'Participate actively in government infrastructure projects',
-  'Build a leading reputation in water works',
-  'Enhance construction material supply capacity',
-  'Strengthen quality and customer satisfaction',
-]
-
-const growthStrategies = [
-  'Expand branch network in key towns and districts',
-  'Invest in modern construction and water works equipment',
-  'Upgrade contractor licensing and certifications',
-  'Provide workforce development and safety training',
-  'Diversify material inventory and supplier partnerships',
-  'Prioritize sustainable, community-focused projects',
-]
-
 function SectionTitle({ eyebrow, title, subtitle }) {
   return (
-    <div className="section-title reveal">
+    <div className="section-title reveal in-view">
       <p className="eyebrow">{eyebrow}</p>
       <h2>{title}</h2>
       {subtitle && <p className="subtitle">{subtitle}</p>}
@@ -100,7 +54,7 @@ function SectionTitle({ eyebrow, title, subtitle }) {
 
 function Card({ title, items }) {
   return (
-    <article className="card reveal">
+    <article className="card reveal in-view">
       <h3>{title}</h3>
       <ul>
         {items.map((item) => (
@@ -111,24 +65,18 @@ function Card({ title, items }) {
   )
 }
 
-function InfoList({ title, items }) {
-  return (
-    <article className="info-list reveal">
-      <h3>{title}</h3>
-      <ul>
-        {items.map((item) => (
-          <li key={item}>{item}</li>
-        ))}
-      </ul>
-    </article>
-  )
+function normalizeMediaUrl(url) {
+  if (!url) return ''
+  if (url.startsWith('http')) return url
+  return `${apiBase}${url}`
 }
 
-function App() {
+function PublicSite() {
   const [theme, setTheme] = useState(() => localStorage.getItem('tb-theme') || 'light')
-  const [formMessage, setFormMessage] = useState('')
-  const [isSending, setIsSending] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isSending, setIsSending] = useState(false)
+  const [formMessage, setFormMessage] = useState('')
+  const [posts, setPosts] = useState([])
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
@@ -136,76 +84,61 @@ function App() {
   }, [theme])
 
   useEffect(() => {
-    const revealItems = document.querySelectorAll('.reveal')
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('in-view')
-          }
-        })
-      },
-      { threshold: 0.2 }
-    )
-
-    revealItems.forEach((item) => observer.observe(item))
-
-    return () => observer.disconnect()
-  }, [])
-
-  useEffect(() => {
     const closeMenuOnResize = () => {
-      if (window.innerWidth > 1020) {
-        setIsMobileMenuOpen(false)
-      }
+      if (window.innerWidth > 1020) setIsMobileMenuOpen(false)
     }
 
     window.addEventListener('resize', closeMenuOnResize)
     return () => window.removeEventListener('resize', closeMenuOnResize)
   }, [])
 
+  useEffect(() => {
+    async function loadPosts() {
+      try {
+        const response = await fetch(`${apiBase}/api/posts`)
+        if (!response.ok) return
+        const data = await response.json()
+        setPosts(data)
+      } catch {
+        setPosts([])
+      }
+    }
+
+    loadPosts()
+  }, [])
+
   const handleSubmit = async (event) => {
     event.preventDefault()
     setFormMessage('')
 
-    const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID
-    const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID
-    const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY
-
-    if (!serviceId || !templateId || !publicKey) {
-      setFormMessage('Email setup is incomplete. Please configure EmailJS environment values.')
-      return
-    }
-
     const formData = new FormData(event.currentTarget)
-    const templateParams = {
-      from_name: formData.get('name'),
+    const payload = {
+      name: formData.get('name'),
       phone: formData.get('phone'),
-      from_email: formData.get('email') || 'Not provided',
-      project_type: formData.get('projectType'),
+      email: formData.get('email') || '',
+      projectType: formData.get('projectType'),
       message: formData.get('message'),
-      company_name: companyName,
-      submitted_at: new Date().toLocaleString(),
     }
 
     try {
       setIsSending(true)
-      await emailjs.send(serviceId, templateId, templateParams, { publicKey })
-      setFormMessage('Thank you! Your request has been sent successfully. We will contact you soon.')
+      const response = await fetch(`${apiBase}/api/requests`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+
+      if (!response.ok) {
+        throw new Error('Request failed')
+      }
+
+      setFormMessage('Request sent successfully. Admin has received your request.')
       event.currentTarget.reset()
-    } catch (error) {
-      setFormMessage('Failed to send request. Please try again or contact us by phone.')
+    } catch {
+      setFormMessage('Failed to send request. Please try again.')
     } finally {
       setIsSending(false)
     }
-  }
-
-  const toggleTheme = () => {
-    setTheme((currentTheme) => (currentTheme === 'light' ? 'dark' : 'light'))
-  }
-
-  const toggleMobileMenu = () => {
-    setIsMobileMenuOpen((current) => !current)
   }
 
   return (
@@ -222,14 +155,13 @@ function App() {
           <button
             className="menu-toggle"
             type="button"
-            onClick={toggleMobileMenu}
+            onClick={() => setIsMobileMenuOpen((v) => !v)}
             aria-expanded={isMobileMenuOpen}
             aria-controls="mobile-main-nav"
-            aria-label={isMobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
           >
-            <span className={isMobileMenuOpen ? 'menu-bar open' : 'menu-bar'} />
-            <span className={isMobileMenuOpen ? 'menu-bar open' : 'menu-bar'} />
-            <span className={isMobileMenuOpen ? 'menu-bar open' : 'menu-bar'} />
+            <span className="menu-bar" />
+            <span className="menu-bar" />
+            <span className="menu-bar" />
           </button>
           <nav
             id="mobile-main-nav"
@@ -241,59 +173,34 @@ function App() {
                 {item.label}
               </a>
             ))}
+            <a href="/admin">Admin</a>
           </nav>
         </div>
-        <button className="theme-toggle" onClick={toggleTheme} type="button">
+        <button className="theme-toggle" onClick={() => setTheme((v) => (v === 'light' ? 'dark' : 'light'))} type="button">
           {theme === 'light' ? 'Dark' : 'Light'} mode
         </button>
       </header>
 
       <main>
-        <section className="hero reveal" id="about">
+        <section className="hero" id="about">
           <div className="hero-content">
             <p className="eyebrow">The Future Is Bright</p>
             <h1>{companyName}</h1>
             <p>
-              Locally owned construction and water infrastructure company delivering
-              reliable projects and quality materials across Shire, Axum, and
-              surrounding areas in Tigray, Ethiopia.
+              Locally owned construction and water infrastructure company delivering reliable projects and quality
+              materials across Shire, Axum, and surrounding areas in Tigray, Ethiopia.
             </p>
-            <div className="hero-actions">
-              <a className="btn btn-primary" href="#contact">
-                Contact Us
-              </a>
-              <a className="btn btn-ghost" href="#services">
-                View Services
-              </a>
-            </div>
           </div>
           <aside className="hero-panel">
             <h3>Vision</h3>
-            <p>
-              To be a trusted leader in water works, civil construction, and
-              construction material supply in Tigray.
-            </p>
+            <p>To be a trusted leader in water works, civil construction, and construction material supply in Tigray.</p>
             <h3>Mission</h3>
-            <p>
-              Deliver high-quality infrastructure services and dependable material
-              supply with timely, efficient, and professional execution.
-            </p>
+            <p>Deliver high-quality services with timely, efficient, and professional execution.</p>
           </aside>
         </section>
 
-        <section className="logo-strip reveal" aria-label="Company quality highlights">
-          <span>Licensed Contractor</span>
-          <span>Water Infrastructure Specialists</span>
-          <span>Regional Coverage: Shire and Axum</span>
-          <span>Public and Private Projects</span>
-        </section>
-
         <section id="services" className="section">
-          <SectionTitle
-            eyebrow="Core Services"
-            title="Integrated Construction and Supply Solutions"
-            subtitle="We provide end-to-end delivery from water systems and civil works to consistent material supply."
-          />
+          <SectionTitle eyebrow="Core Services" title="Integrated Construction and Supply Solutions" />
           <div className="grid cards-grid">
             {serviceGroups.map((group) => (
               <Card key={group.title} title={group.title} items={group.items} />
@@ -301,65 +208,39 @@ function App() {
           </div>
         </section>
 
-        <section id="customers" className="section section-alt">
+        <section id="gallery" className="section">
           <SectionTitle
-            eyebrow="Target Customers"
-            title="Serving Public and Private Sectors"
-            subtitle="Our services are tailored for institutions, development partners, businesses, and households."
+            eyebrow="Latest Media"
+            title="Project Gallery"
+            subtitle="Admin uploads videos and images here for clients to view."
           />
-          <div className="grid two-col">
-            <InfoList title="Who We Serve" items={targetCustomers} />
-            <InfoList title="Competitive Advantage" items={advantages} />
-          </div>
-        </section>
-
-        <section id="resources" className="section">
-          <SectionTitle
-            eyebrow="Capability"
-            title="Strong Team, Tools, and Growth Roadmap"
-            subtitle="Our operational resources and strategic goals position us for larger projects and long-term impact."
-          />
-          <div className="grid three-col">
-            <InfoList title="Equipment and Resources" items={resources} />
-            <InfoList title="Business Objectives" items={objectives} />
-            <InfoList title="Future Growth Strategy" items={growthStrategies} />
+          <div className="gallery-grid">
+            {posts.length === 0 ? (
+              <p className="subtitle">No gallery posts yet. Admin can add posts from the admin page.</p>
+            ) : (
+              posts.map((post) => (
+                <article className="card" key={post._id}>
+                  <h3>{post.title}</h3>
+                  {post.mediaType === 'video' ? (
+                    <video controls className="gallery-media" src={normalizeMediaUrl(post.mediaUrl)} />
+                  ) : (
+                    <img className="gallery-media" src={normalizeMediaUrl(post.mediaUrl)} alt={post.title} />
+                  )}
+                  {post.description && <p>{post.description}</p>}
+                </article>
+              ))
+            )}
           </div>
         </section>
       </main>
 
-      <footer id="contact" className="footer reveal">
+      <footer id="contact" className="footer">
         <section>
-          <h2>Let us build with you</h2>
-          <p>
-            Ready to collaborate on water infrastructure, civil works, or material
-            supply in Tigray.
-          </p>
-        </section>
-
-        <section className="contact-grid">
-          <article>
-            <h3>Office Locations</h3>
-            <p>Branch 1: Shire, Tigray, Ethiopia</p>
-            <p>Branch 2: Axum, Tigray, Ethiopia</p>
-          </article>
-          <article>
-            <h3>Phone</h3>
-            <p>+251 937 020005</p>
-            <p>+251 962 577336</p>
-          </article>
-          <article>
-            <h3>Direct Chat</h3>
-            <a className="social-btn whatsapp" href="https://wa.me/251937020005" target="_blank" rel="noreferrer">
-              WhatsApp
-            </a>
-            <a className="social-btn telegram" href="https://t.me/TsegayBrhaneWWC" target="_blank" rel="noreferrer">
-              Telegram
-            </a>
-          </article>
+          <h2>Send your request</h2>
+          <p>Admin receives requests directly in the admin dashboard.</p>
         </section>
 
         <form className="contact-form" onSubmit={handleSubmit}>
-          <h3>Send us your project request</h3>
           <div className="form-grid">
             <label>
               Full Name
@@ -386,12 +267,7 @@ function App() {
             </label>
             <label className="full-width">
               Project Details
-              <textarea
-                name="message"
-                rows="4"
-                required
-                placeholder="Describe your project location, scope, and timeline"
-              />
+              <textarea name="message" rows="4" required placeholder="Describe your project location and needs" />
             </label>
           </div>
           <button className="btn btn-primary form-submit" type="submit" disabled={isSending}>
@@ -399,6 +275,7 @@ function App() {
           </button>
           {formMessage && <p className="form-message">{formMessage}</p>}
         </form>
+
         <p className="footer-credit">
           Designed by Dawit -{' '}
           <a href="https://dafitech.org" target="_blank" rel="noreferrer">
@@ -408,6 +285,203 @@ function App() {
       </footer>
     </div>
   )
+}
+
+function AdminPage() {
+  const [adminKeyInput, setAdminKeyInput] = useState('tsegay@shire')
+  const [adminKey, setAdminKey] = useState(() => localStorage.getItem('admin-key') || '')
+  const [requests, setRequests] = useState([])
+  const [posts, setPosts] = useState([])
+  const [status, setStatus] = useState('')
+
+  const isLoggedIn = useMemo(() => Boolean(adminKey), [adminKey])
+
+  async function loadAdminData(currentKey) {
+    const headers = { 'x-admin-key': currentKey }
+    const [reqRes, postRes] = await Promise.all([
+      fetch(`${apiBase}/api/admin/requests`, { headers }),
+      fetch(`${apiBase}/api/admin/posts`, { headers }),
+    ])
+
+    if (!reqRes.ok || !postRes.ok) {
+      throw new Error('Unauthorized or API unavailable')
+    }
+
+    setRequests(await reqRes.json())
+    setPosts(await postRes.json())
+  }
+
+  useEffect(() => {
+    if (!adminKey) return
+
+    loadAdminData(adminKey).catch(() => {
+      setStatus('Failed to load admin data. Check admin key.')
+    })
+  }, [adminKey])
+
+  const handleLogin = async (event) => {
+    event.preventDefault()
+
+    try {
+      await loadAdminData(adminKeyInput)
+      localStorage.setItem('admin-key', adminKeyInput)
+      setAdminKey(adminKeyInput)
+      setAdminKeyInput('')
+      setStatus('Admin logged in.')
+    } catch {
+      setStatus('Invalid admin key or server not running.')
+    }
+  }
+
+  const logout = () => {
+    localStorage.removeItem('admin-key')
+    setAdminKey('')
+    setRequests([])
+    setPosts([])
+    setStatus('Logged out.')
+  }
+
+  const handlePostCreate = async (event) => {
+    event.preventDefault()
+    setStatus('')
+
+    const formData = new FormData(event.currentTarget)
+
+    try {
+      const response = await fetch(`${apiBase}/api/admin/posts`, {
+        method: 'POST',
+        headers: { 'x-admin-key': adminKey },
+        body: formData,
+      })
+
+      if (!response.ok) throw new Error('Create failed')
+
+      event.currentTarget.reset()
+      await loadAdminData(adminKey)
+      setStatus('Media post created successfully.')
+    } catch {
+      setStatus('Failed to create media post.')
+    }
+  }
+
+  const handleDelete = async (id) => {
+    try {
+      const response = await fetch(`${apiBase}/api/admin/posts/${id}`, {
+        method: 'DELETE',
+        headers: { 'x-admin-key': adminKey },
+      })
+      if (!response.ok) throw new Error('Delete failed')
+      await loadAdminData(adminKey)
+    } catch {
+      setStatus('Failed to delete post.')
+    }
+  }
+
+  if (!isLoggedIn) {
+    return (
+      <div className="admin-page">
+        <h1>Admin Login</h1>
+        <form className="admin-form" onSubmit={handleLogin}>
+          <label>
+            Admin Key
+            <input
+              type="password"
+              value={adminKeyInput}
+              onChange={(event) => setAdminKeyInput(event.target.value)}
+              required
+              placeholder="Enter ADMIN_KEY from server"
+            />
+          </label>
+          <button type="submit" className="btn btn-primary">Login</button>
+        </form>
+        {status && <p>{status}</p>}
+        <p><a href="/">Back to website</a></p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="admin-page">
+      <div className="admin-header">
+        <h1>Admin Dashboard</h1>
+        <div className="admin-actions">
+          <a href="/" className="btn btn-ghost">View Site</a>
+          <button type="button" className="btn btn-primary" onClick={logout}>Logout</button>
+        </div>
+      </div>
+
+      <section className="admin-section">
+        <h2>Create Image / Video Post</h2>
+        <form className="admin-form" onSubmit={handlePostCreate}>
+          <label>
+            Title
+            <input name="title" required placeholder="Project title" />
+          </label>
+          <label>
+            Description
+            <textarea name="description" rows="3" placeholder="Short description" />
+          </label>
+          <label>
+            Media Type
+            <select name="mediaType" defaultValue="image">
+              <option value="image">Image</option>
+              <option value="video">Video</option>
+            </select>
+          </label>
+          <label>
+            Upload File
+            <input name="mediaFile" type="file" accept="image/*,video/*" />
+          </label>
+          <label>
+            Or External URL
+            <input name="mediaUrl" placeholder="https://..." />
+          </label>
+          <button type="submit" className="btn btn-primary">Create Post</button>
+        </form>
+      </section>
+
+      <section className="admin-section">
+        <h2>User Requests ({requests.length})</h2>
+        <div className="admin-grid">
+          {requests.map((request) => (
+            <article className="card" key={request._id}>
+              <h3>{request.name}</h3>
+              <p><strong>Phone:</strong> {request.phone}</p>
+              <p><strong>Email:</strong> {request.email || 'Not provided'}</p>
+              <p><strong>Type:</strong> {request.projectType}</p>
+              <p>{request.message}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="admin-section">
+        <h2>Published Media ({posts.length})</h2>
+        <div className="admin-grid">
+          {posts.map((post) => (
+            <article className="card" key={post._id}>
+              <h3>{post.title}</h3>
+              {post.mediaType === 'video' ? (
+                <video controls className="gallery-media" src={normalizeMediaUrl(post.mediaUrl)} />
+              ) : (
+                <img className="gallery-media" src={normalizeMediaUrl(post.mediaUrl)} alt={post.title} />
+              )}
+              {post.description && <p>{post.description}</p>}
+              <button type="button" className="btn btn-ghost" onClick={() => handleDelete(post._id)}>
+                Delete
+              </button>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      {status && <p>{status}</p>}
+    </div>
+  )
+}
+
+function App() {
+  return window.location.pathname === '/admin' ? <AdminPage /> : <PublicSite />
 }
 
 export default App
