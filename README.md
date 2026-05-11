@@ -46,9 +46,19 @@ Copy `frontend/.env.example` to `frontend/.env`. For local dev leave `VITE_API_B
 ## Render (backend)
 
 1. New **Web Service** → connect repo.
+
+**Option A (recommended):** deploy only the API folder
+
 2. **Root Directory:** `backend`
 3. **Build Command:** `npm install`
 4. **Start Command:** `npm start`
+
+**Option B:** deploy from repository root (monorepo)
+
+2. **Root Directory:** *(leave empty or `.`)*
+3. **Build Command:** `npm install`
+4. **Start Command:** `npm start`  
+   (root `package.json` runs the `backend` workspace.)
 5. Environment: paste variables from `backend/.env.example` (`MONGO_URI`, `ADMIN_KEY`, `ALLOWED_ORIGINS` including your Vercel URL, SMTP if you use email).
 
 After deploy, add the Render URL to `ALLOWED_ORIGINS` so the browser is allowed to call the API from your Vercel domain.
