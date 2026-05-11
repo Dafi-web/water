@@ -20,6 +20,7 @@ const port = process.env.PORT || 5000;
 
 const defaultAllowedOrigins = [
   "http://localhost:5173",
+  "http://127.0.0.1:5173",
   "https://water-chi-two.vercel.app",
 ];
 
@@ -39,7 +40,7 @@ app.use(
   })
 );
 app.options("*", cors());
-app.use(express.json());
+app.use(express.json({ limit: "50mb" }));
 app.use("/uploads", express.static(path.join(projectRoot, "uploads")));
 
 const storage = multer.diskStorage({
@@ -131,29 +132,45 @@ app.get("/api/admin/posts", adminAuth, async (_, res) => {
   res.json(posts);
 });
 
-app.post("/api/admin/posts", adminAuth, upload.single("mediaFile"), async (req, res) => {
-  const { title, description = "", mediaType = "image", mediaUrl = "" } = req.body;
+async function adminCreatePostHandler(req, res) {
+  const { title, description = "", mediaType = "image", mediaUrl = "", mediaDataUrl = "" } = req.body || {};
 
   if (!title) {
     return res.status(400).json({ message: "Title is required." });
   }
 
   const fileUrl = req.file ? `/uploads/${req.file.filename}` : "";
-  const finalMediaUrl = fileUrl || mediaUrl;
+  const finalMediaUrl = fileUrl || mediaDataUrl || mediaUrl;
 
   if (!finalMediaUrl) {
-    return res.status(400).json({ message: "Upload media file or provide media URL." });
+    return res.status(400).json({ message: "Upload media file or provide media URL / data." });
   }
 
-  const created = await Post.create({
-    title,
-    description,
-    mediaType: mediaType === "video" ? "video" : "image",
-    mediaUrl: finalMediaUrl,
-  });
+  try {
+    const created = await Post.create({
+      title,
+      description,
+      mediaType: mediaType === "video" ? "video" : "image",
+      mediaUrl: finalMediaUrl,
+    });
+    res.status(201).json(created);
+  } catch {
+    res.status(500).json({ message: "Failed to create post." });
+  }
+}
 
-  res.status(201).json(created);
-});
+app.post(
+  "/api/admin/posts",
+  adminAuth,
+  (req, res, next) => {
+    const contentType = req.headers["content-type"] || "";
+    if (contentType.includes("multipart/form-data")) {
+      return upload.single("mediaFile")(req, res, next);
+    }
+    next();
+  },
+  adminCreatePostHandler
+);
 
 app.delete("/api/admin/posts/:id", adminAuth, async (req, res) => {
   await Post.findByIdAndDelete(req.params.id);
