@@ -39,7 +39,6 @@ app.use(
     allowedHeaders: ["Content-Type", "x-admin-key"],
   })
 );
-app.options("*", cors());
 app.use(express.json({ limit: "50mb" }));
 app.use("/uploads", express.static(path.join(projectRoot, "uploads")));
 
