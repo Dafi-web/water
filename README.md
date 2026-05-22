@@ -59,8 +59,20 @@ Copy `frontend/.env.example` to `frontend/.env`. For local dev leave `VITE_API_B
 3. **Build Command:** `npm install`
 4. **Start Command:** `npm start`  
    (root `package.json` runs the `backend` workspace.)
-5. Environment: paste variables from `backend/.env.example` (`MONGO_URI`, `ADMIN_KEY`, `ALLOWED_ORIGINS` including your Vercel URL, SMTP if you use email).
+5. Environment variables (Render → **Environment**):
 
-After deploy, add the Render URL to `ALLOWED_ORIGINS` so the browser is allowed to call the API from your Vercel domain.
+| Name | Value |
+|------|--------|
+| `MONGO_URI` | `mongodb+srv://wediabrhana_db_user:yesno%401212@cluster0.c6lfh4z.mongodb.net/?appName=Cluster0` |
+| `ADMIN_KEY` | `tsegay@shire` |
+| `ALLOWED_ORIGINS` | `http://localhost:5173,https://water-frontend-kappa.vercel.app` |
+| `ADMIN_EMAIL` | your email (optional, for request notifications) |
+| `SMTP_*` | optional Gmail/app-password settings |
+
+**MongoDB password note:** if password is `yesno@1212`, the URI must use `yesno%401212` (not the raw `@`).
+
+**Vercel** `VITE_API_BASE_URL`: `https://water-5zvk.onrender.com` (your Render service URL, no trailing slash).
+
+After changing env on Render, run **Manual Deploy**.
 
 Optional: repository root includes `render.yaml` for a Blueprint-style deploy (service `rootDir: backend`).

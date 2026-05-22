@@ -186,16 +186,26 @@ app.delete("/api/admin/posts/:id", adminAuth, async (req, res) => {
 
 async function start() {
   if (!process.env.MONGO_URI) {
-    throw new Error("MONGO_URI is missing. Add it to your .env file.");
+    throw new Error("MONGO_URI is missing. Add it to backend/.env or Render environment.");
   }
 
-  await mongoose.connect(process.env.MONGO_URI);
+  try {
+    await mongoose.connect(process.env.MONGO_URI);
+  } catch (error) {
+    if (error?.code === 8000 || error?.codeName === "AtlasError") {
+      console.error(
+        "MongoDB authentication failed. Check MONGO_URI username/password on Render. Encode @ in password as %40."
+      );
+    }
+    throw error;
+  }
+
   app.listen(port, () => {
     console.log(`API server running on http://localhost:${port}`);
   });
 }
 
 start().catch((error) => {
-  console.error("Failed to start server", error);
+  console.error("Failed to start server", error.message || error);
   process.exit(1);
 });
