@@ -72,15 +72,6 @@ function normalizeMediaUrl(url) {
   return `${apiBase}${url}`
 }
 
-function fileToDataUrl(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(String(reader.result))
-    reader.onerror = () => reject(new Error('Failed to read selected file'))
-    reader.readAsDataURL(file)
-  })
-}
-
 function PublicSite() {
   const [theme, setTheme] = useState(() => localStorage.getItem('tb-theme') || 'light')
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -364,34 +355,48 @@ function AdminPage() {
     event.preventDefault()
     setStatus('')
 
-    const formData = new FormData(event.currentTarget)
+    const form = event.currentTarget
+    const formData = new FormData(form)
     const mediaFile = formData.get('mediaFile')
-    const payload = {
-      title: formData.get('title'),
-      description: formData.get('description') || '',
-      mediaType: formData.get('mediaType') || 'image',
-      mediaUrl: formData.get('mediaUrl') || '',
-      mediaDataUrl: '',
-    }
+    const mediaUrl = String(formData.get('mediaUrl') || '').trim()
+    const hasFile = mediaFile instanceof File && mediaFile.size > 0
 
-    if (mediaFile instanceof File && mediaFile.size > 0) {
-      payload.mediaDataUrl = await fileToDataUrl(mediaFile)
+    if (!hasFile && !mediaUrl) {
+      setStatus('Upload a file or enter an external media URL.')
+      return
     }
 
     try {
-      const response = await fetch(`${apiBase}/api/admin/posts`, {
-        method: 'POST',
-        headers: { 'x-admin-key': adminKey, 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
+      let response
 
-      if (!response.ok) throw new Error('Create failed')
+      if (hasFile) {
+        formData.delete('mediaUrl')
+        response = await fetch(`${apiBase}/api/admin/posts`, {
+          method: 'POST',
+          headers: { 'x-admin-key': adminKey },
+          body: formData,
+        })
+      } else {
+        response = await fetch(`${apiBase}/api/admin/posts`, {
+          method: 'POST',
+          headers: { 'x-admin-key': adminKey, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: formData.get('title'),
+            description: formData.get('description') || '',
+            mediaType: formData.get('mediaType') || 'image',
+            mediaUrl,
+          }),
+        })
+      }
 
-      event.currentTarget.reset()
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(data.message || 'Create failed')
+
+      form.reset()
       await loadAdminData(adminKey)
       setStatus('Media post created successfully.')
-    } catch {
-      setStatus('Failed to create media post.')
+    } catch (error) {
+      setStatus(error?.message || 'Failed to create media post.')
     }
   }
 
@@ -460,11 +465,11 @@ function AdminPage() {
             </select>
           </label>
           <label>
-            Upload File
+            Upload File (max 15MB)
             <input name="mediaFile" type="file" accept="image/*,video/*" />
           </label>
           <label>
-            Or External URL
+            Or External URL (recommended for large videos on production)
             <input name="mediaUrl" placeholder="https://..." />
           </label>
           <button type="submit" className="btn btn-primary">Create Post</button>

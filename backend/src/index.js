@@ -4,6 +4,8 @@ import cors from "cors";
 import mongoose from "mongoose";
 import multer from "multer";
 import nodemailer from "nodemailer";
+import fs from "node:fs";
+import fsp from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -14,6 +16,21 @@ import { adminAuth } from "./middleware/adminAuth.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, "..");
+const uploadsDir = path.join(projectRoot, "uploads");
+const MAX_MEDIA_BYTES = 15 * 1024 * 1024;
+
+fs.mkdirSync(uploadsDir, { recursive: true });
+
+const MIME_EXT = {
+  "image/jpeg": ".jpg",
+  "image/jpg": ".jpg",
+  "image/png": ".png",
+  "image/gif": ".gif",
+  "image/webp": ".webp",
+  "video/mp4": ".mp4",
+  "video/webm": ".webm",
+  "video/quicktime": ".mov",
+};
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -51,7 +68,7 @@ app.use(express.json({ limit: "50mb" }));
 app.use("/uploads", express.static(path.join(projectRoot, "uploads")));
 
 const storage = multer.diskStorage({
-  destination: (_, __, cb) => cb(null, path.join(projectRoot, "uploads")),
+  destination: (_, __, cb) => cb(null, uploadsDir),
   filename: (_, file, cb) => {
     const ext = path.extname(file.originalname);
     const safeName = file.originalname
@@ -63,7 +80,29 @@ const storage = multer.diskStorage({
   },
 });
 
-const upload = multer({ storage });
+const upload = multer({
+  storage,
+  limits: { fileSize: MAX_MEDIA_BYTES },
+});
+
+async function saveDataUrlToUploads(dataUrl) {
+  const match = /^data:([^;]+);base64,(.+)$/.exec(dataUrl);
+  if (!match) {
+    throw new Error("Invalid media data URL.");
+  }
+
+  const mime = match[1].toLowerCase();
+  const buffer = Buffer.from(match[2], "base64");
+
+  if (buffer.length > MAX_MEDIA_BYTES) {
+    throw new Error("File too large. Maximum size is 15MB.");
+  }
+
+  const ext = MIME_EXT[mime] || (mime.startsWith("video/") ? ".mp4" : ".jpg");
+  const filename = `${Date.now()}-upload${ext}`;
+  await fsp.writeFile(path.join(uploadsDir, filename), buffer);
+  return `/uploads/${filename}`;
+}
 
 function getMailTransporter() {
   const host = process.env.SMTP_HOST;
@@ -148,20 +187,28 @@ app.get("/api/admin/posts", adminAuth, async (_, res) => {
 });
 
 async function adminCreatePostHandler(req, res) {
-  const { title, description = "", mediaType = "image", mediaUrl = "", mediaDataUrl = "" } = req.body || {};
-
-  if (!title) {
-    return res.status(400).json({ message: "Title is required." });
-  }
-
-  const fileUrl = req.file ? `/uploads/${req.file.filename}` : "";
-  const finalMediaUrl = fileUrl || mediaDataUrl || mediaUrl;
-
-  if (!finalMediaUrl) {
-    return res.status(400).json({ message: "Upload media file or provide media URL / data." });
-  }
-
   try {
+    const { title, description = "", mediaType = "image", mediaUrl = "", mediaDataUrl = "" } =
+      req.body || {};
+
+    if (!title) {
+      return res.status(400).json({ message: "Title is required." });
+    }
+
+    let finalMediaUrl = "";
+
+    if (req.file) {
+      finalMediaUrl = `/uploads/${req.file.filename}`;
+    } else if (mediaDataUrl) {
+      finalMediaUrl = await saveDataUrlToUploads(mediaDataUrl);
+    } else if (mediaUrl) {
+      finalMediaUrl = mediaUrl.trim();
+    }
+
+    if (!finalMediaUrl) {
+      return res.status(400).json({ message: "Upload a media file or provide a media URL." });
+    }
+
     const created = await Post.create({
       title,
       description,
@@ -169,8 +216,13 @@ async function adminCreatePostHandler(req, res) {
       mediaUrl: finalMediaUrl,
     });
     res.status(201).json(created);
-  } catch {
-    res.status(500).json({ message: "Failed to create post." });
+  } catch (error) {
+    console.error("Failed to create post", error);
+    const message =
+      error?.message?.includes("too large") || error?.code === "LIMIT_FILE_SIZE"
+        ? "File too large. Maximum size is 15MB."
+        : error?.message || "Failed to create post.";
+    res.status(500).json({ message });
   }
 }
 
@@ -180,7 +232,15 @@ app.post(
   (req, res, next) => {
     const contentType = req.headers["content-type"] || "";
     if (contentType.includes("multipart/form-data")) {
-      return upload.single("mediaFile")(req, res, next);
+      return upload.single("mediaFile")(req, res, (error) => {
+        if (error?.code === "LIMIT_FILE_SIZE") {
+          return res.status(400).json({ message: "File too large. Maximum size is 15MB." });
+        }
+        if (error) {
+          return res.status(400).json({ message: error.message || "Upload failed." });
+        }
+        next();
+      });
     }
     next();
   },
