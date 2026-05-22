@@ -123,6 +123,14 @@ function getMailTransporter() {
   });
 }
 
+app.get("/", (_, res) => {
+  res.json({
+    service: "Tsegay Brhane Water Works API",
+    health: "/api/health",
+    note: "This is the backend API only — not the public website. Use your Vercel frontend URL to view the site.",
+  });
+});
+
 app.get("/api/health", (_, res) => {
   res.json({ ok: true });
 });
@@ -252,6 +260,13 @@ app.post(
 app.delete("/api/admin/posts/:id", adminAuth, async (req, res) => {
   await Post.findByIdAndDelete(req.params.id);
   res.status(204).send();
+});
+
+app.use((req, res) => {
+  res.status(404).json({
+    message: `No route ${req.method} ${req.path}`,
+    hint: "Open your Vercel site for the website. API paths start with /api/ (e.g. /api/health).",
+  });
 });
 
 async function start() {
