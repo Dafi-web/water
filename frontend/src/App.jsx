@@ -3,8 +3,10 @@ import './App.css'
 import companyLogo from './assets/company-logo.svg'
 
 const companyName = 'Tsegay Brhane Water Works Contractor & Construction Materials Retailer'
-// Empty = same-origin /api (Vercel proxy). Set VITE_API_BASE_URL only for direct Render calls.
-const apiBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
+// Production: always same-origin /api (Vercel middleware → Render). Dev: optional VITE_API_BASE_URL or Vite proxy.
+const apiBase = import.meta.env.PROD
+  ? ''
+  : (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
 
 const navItems = [
   { label: 'About', href: '#about' },
@@ -113,7 +115,8 @@ function PublicSite() {
     event.preventDefault()
     setFormMessage('')
 
-    const formData = new FormData(event.currentTarget)
+    const form = event.currentTarget
+    const formData = new FormData(form)
     const payload = {
       name: formData.get('name'),
       phone: formData.get('phone'),
@@ -134,7 +137,7 @@ function PublicSite() {
 
       if (response.status >= 200 && response.status < 300) {
         setFormMessage('Request sent successfully. Admin has received your request.')
-        event.currentTarget.reset()
+        form.reset()
         return
       }
 

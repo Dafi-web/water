@@ -46,7 +46,7 @@ Copy `frontend/.env.example` to `frontend/.env`. For local dev leave `VITE_API_B
 | Name | Value |
 |------|--------|
 | `API_PROXY_TARGET` | Your **Render** URL, e.g. `https://your-service.onrender.com` (no trailing slash) — **required** |
-| `VITE_API_BASE_URL` | **delete** or leave empty (if set, the contact form bypasses the proxy and often breaks) |
+| `VITE_API_BASE_URL` | **delete** on Vercel (production builds ignore it and use `/api` proxy) |
 
 After saving env vars, **Redeploy** Vercel (Deployments → ⋯ → Redeploy).
 
