@@ -22,18 +22,26 @@ const defaultAllowedOrigins = [
   "http://localhost:5173",
   "http://127.0.0.1:5173",
   "https://water-chi-two.vercel.app",
+  "https://water-frontend-kappa.vercel.app",
 ];
 
 const allowedOrigins = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(",").map((origin) => origin.trim())
+  ? process.env.ALLOWED_ORIGINS.split(",").map((origin) => origin.trim()).filter(Boolean)
   : defaultAllowedOrigins;
+
+function isOriginAllowed(origin) {
+  if (!origin) return true;
+  if (allowedOrigins.includes(origin)) return true;
+  // Allow Vercel production and preview deployments (*.vercel.app)
+  if (/^https:\/\/[\w-]+\.vercel\.app$/.test(origin)) return true;
+  return false;
+}
 
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) return callback(null, true);
-      return callback(new Error(`CORS blocked for origin: ${origin}`));
+      if (isOriginAllowed(origin)) return callback(null, true);
+      return callback(null, false);
     },
     methods: ["GET", "POST", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "x-admin-key"],
