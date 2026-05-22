@@ -135,6 +135,11 @@ app.get("/api/health", (_, res) => {
   res.json({ ok: true });
 });
 
+// Convenience alias (use /api/health in production via Vercel proxy)
+app.get("/health", (_, res) => {
+  res.json({ ok: true, api: "/api/health" });
+});
+
 app.get("/api/posts", async (_, res) => {
   const posts = await Post.find().sort({ createdAt: -1 });
   res.json(posts);
