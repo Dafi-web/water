@@ -13,6 +13,19 @@ function getBackendBase() {
   return raw.replace(/\/$/, "");
 }
 
+function getIncomingUploadsPath(req) {
+  const segments = req.query?.path;
+  if (segments) {
+    const joined = Array.isArray(segments) ? segments.join("/") : String(segments);
+    return `/uploads/${joined}`;
+  }
+
+  const url = req.url || "";
+  const pathOnly = url.split("?")[0];
+  if (pathOnly.startsWith("/uploads")) return pathOnly;
+  return "/uploads";
+}
+
 export default async function handler(req, res) {
   const backend = getBackendBase();
   if (!backend) {
@@ -20,14 +33,14 @@ export default async function handler(req, res) {
     return;
   }
 
-  const incoming = req.url || "/uploads";
-  const qIndex = incoming.indexOf("?");
-  const pathname = qIndex === -1 ? incoming : incoming.slice(0, qIndex);
-  const search = qIndex === -1 ? "" : incoming.slice(qIndex);
+  const pathname = getIncomingUploadsPath(req);
+  const url = req.url || "";
+  const qIndex = url.indexOf("?");
+  const search = qIndex === -1 ? "" : url.slice(qIndex);
   const target = `${backend}${pathname}${search}`;
 
   try {
-    const upstream = await fetch(target, { method: req.method, headers: req.headers });
+    const upstream = await fetch(target, { method: req.method });
     res.status(upstream.status);
     const contentType = upstream.headers.get("content-type");
     if (contentType) res.setHeader("Content-Type", contentType);

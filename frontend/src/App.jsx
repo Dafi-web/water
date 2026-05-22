@@ -130,8 +130,14 @@ function PublicSite() {
         body: JSON.stringify(payload),
       })
 
-      let data = {}
       const contentType = response.headers.get('content-type') || ''
+      if (contentType.includes('text/html')) {
+        throw new Error(
+          'API is not connected. On Vercel set API_PROXY_TARGET to your Render URL, clear VITE_API_BASE_URL, and redeploy.'
+        )
+      }
+
+      let data = {}
       if (contentType.includes('application/json')) {
         data = await response.json().catch(() => ({}))
       }

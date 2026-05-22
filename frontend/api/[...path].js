@@ -14,6 +14,19 @@ function getBackendBase() {
   return raw.replace(/\/$/, "");
 }
 
+function getIncomingApiPath(req) {
+  const segments = req.query?.path;
+  if (segments) {
+    const joined = Array.isArray(segments) ? segments.join("/") : String(segments);
+    return `/api/${joined}`;
+  }
+
+  const url = req.url || "";
+  const pathOnly = url.split("?")[0];
+  if (pathOnly.startsWith("/api")) return pathOnly;
+  return "/api";
+}
+
 async function readBody(req) {
   const chunks = [];
   for await (const chunk of req) {
@@ -32,10 +45,10 @@ export default async function handler(req, res) {
     return;
   }
 
-  const incoming = req.url || "/api";
-  const qIndex = incoming.indexOf("?");
-  const pathname = qIndex === -1 ? incoming : incoming.slice(0, qIndex);
-  const search = qIndex === -1 ? "" : incoming.slice(qIndex);
+  const pathname = getIncomingApiPath(req);
+  const url = req.url || "";
+  const qIndex = url.indexOf("?");
+  const search = qIndex === -1 ? "" : url.slice(qIndex);
   const target = `${backend}${pathname}${search}`;
 
   const headers = { ...req.headers };

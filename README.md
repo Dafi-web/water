@@ -45,10 +45,12 @@ Copy `frontend/.env.example` to `frontend/.env`. For local dev leave `VITE_API_B
 
 | Name | Value |
 |------|--------|
-| `API_PROXY_TARGET` | Your **Render** URL, e.g. `https://your-service.onrender.com` (no trailing slash) |
-| `VITE_API_BASE_URL` | leave **empty** (uses same-origin `/api` proxy) |
+| `API_PROXY_TARGET` | Your **Render** URL, e.g. `https://your-service.onrender.com` (no trailing slash) — **required** |
+| `VITE_API_BASE_URL` | **delete** or leave empty (if set, the contact form bypasses the proxy and often breaks) |
 
-Optional: set `VITE_API_BASE_URL` to the Render URL instead of using the proxy (requires correct `ALLOWED_ORIGINS` on Render).
+After saving env vars, **Redeploy** Vercel (Deployments → ⋯ → Redeploy).
+
+**Verify:** open `https://your-vercel-app.vercel.app/api/health` — must show `{"ok":true}`, not the website HTML.
 
 ## Render (backend)
 
