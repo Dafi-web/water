@@ -57,8 +57,10 @@ function isOriginAllowed(origin) {
 app.use(
   cors({
     origin(origin, callback) {
-      if (isOriginAllowed(origin)) return callback(null, origin || true);
-      return callback(null, false);
+      if (!origin) return callback(null, true);
+      if (isOriginAllowed(origin)) return callback(null, origin);
+      // Allow direct browser calls from any origin (contact form / admin)
+      return callback(null, origin);
     },
     methods: ["GET", "POST", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "x-admin-key"],

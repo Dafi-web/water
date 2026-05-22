@@ -41,7 +41,14 @@ Copy `frontend/.env.example` to `frontend/.env`. For local dev leave `VITE_API_B
 2. **Root Directory:** `frontend`
 3. Build: `npm run build` (default)
 4. Output: `dist` (default for Vite)
-5. Environment variables: set `VITE_API_BASE_URL` to your **Render** backend URL, e.g. `https://your-service.onrender.com` (no trailing slash).
+5. Environment variables (recommended — avoids CORS):
+
+| Name | Value |
+|------|--------|
+| `API_PROXY_TARGET` | Your **Render** URL, e.g. `https://your-service.onrender.com` (no trailing slash) |
+| `VITE_API_BASE_URL` | leave **empty** (uses same-origin `/api` proxy) |
+
+Optional: set `VITE_API_BASE_URL` to the Render URL instead of using the proxy (requires correct `ALLOWED_ORIGINS` on Render).
 
 ## Render (backend)
 
@@ -71,8 +78,15 @@ Copy `frontend/.env.example` to `frontend/.env`. For local dev leave `VITE_API_B
 
 **MongoDB password note:** if password is `yesno@1212`, the URI must use `yesno%401212` (not the raw `@`).
 
-**Vercel** `VITE_API_BASE_URL`: `https://water-5zvk.onrender.com` (your Render service URL, no trailing slash).
+**Vercel** (required for contact form / admin):
 
-After changing env on Render, run **Manual Deploy**.
+| Name | Value |
+|------|--------|
+| `API_PROXY_TARGET` | Your live Render URL from the Render dashboard (copy **exact** URL; `water-5zvk` may be outdated if the service was recreated) |
+| `VITE_API_BASE_URL` | leave empty |
+
+After changing env on Render or Vercel, **Redeploy** both services.
+
+**Test backend:** open `https://YOUR-SERVICE.onrender.com/api/health` — must show `{"ok":true}`. If you see `Not Found`, the URL is wrong or the Render service is down.
 
 Optional: repository root includes `render.yaml` for a Blueprint-style deploy (service `rootDir: backend`).

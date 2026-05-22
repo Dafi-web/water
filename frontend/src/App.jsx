@@ -3,7 +3,8 @@ import './App.css'
 import companyLogo from './assets/company-logo.svg'
 
 const companyName = 'Tsegay Brhane Water Works Contractor & Construction Materials Retailer'
-const apiBase = import.meta.env.VITE_API_BASE_URL || ''
+// Empty = same-origin /api (Vercel proxy). Set VITE_API_BASE_URL only for direct Render calls.
+const apiBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
 
 const navItems = [
   { label: 'About', href: '#about' },
@@ -129,10 +130,22 @@ function PublicSite() {
         body: JSON.stringify(payload),
       })
 
-      const data = await response.json().catch(() => ({}))
+      let data = {}
+      const contentType = response.headers.get('content-type') || ''
+      if (contentType.includes('application/json')) {
+        data = await response.json().catch(() => ({}))
+      }
 
       if (!response.ok) {
-        throw new Error(data.message || 'Request failed')
+        const hint =
+          response.status === 404
+            ? 'API not found. On Vercel set API_PROXY_TARGET to your live Render URL, or fix VITE_API_BASE_URL.'
+            : response.status === 502 || response.status === 503
+              ? 'Backend unreachable. Check Render service is running.'
+              : ''
+        throw new Error(
+          [data.message, hint, `HTTP ${response.status}`].filter(Boolean).join(' ')
+        )
       }
 
       setFormMessage('Request sent successfully. Admin has received your request.')
@@ -143,7 +156,7 @@ function PublicSite() {
         (error?.message && /failed to fetch|network/i.test(error.message))
       setFormMessage(
         isNetwork
-          ? 'Could not confirm delivery. Your request may still have been saved — we will contact you if needed.'
+          ? 'Could not reach the server. Check internet connection and redeploy settings.'
           : error?.message || 'Failed to send request. Please try again.'
       )
     } finally {
