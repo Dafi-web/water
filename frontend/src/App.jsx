@@ -131,9 +131,16 @@ function PublicSite() {
       })
 
       const contentType = response.headers.get('content-type') || ''
+
+      if (response.status >= 200 && response.status < 300) {
+        setFormMessage('Request sent successfully. Admin has received your request.')
+        event.currentTarget.reset()
+        return
+      }
+
       if (contentType.includes('text/html')) {
         throw new Error(
-          'API is not connected. On Vercel set API_PROXY_TARGET to your Render URL, clear VITE_API_BASE_URL, and redeploy.'
+          'API is not connected. On Vercel set API_PROXY_TARGET to your Render URL, delete VITE_API_BASE_URL, and redeploy.'
         )
       }
 
@@ -142,27 +149,20 @@ function PublicSite() {
         data = await response.json().catch(() => ({}))
       }
 
-      if (!response.ok) {
-        const hint =
-          response.status === 404
-            ? 'API not found. On Vercel set API_PROXY_TARGET to your live Render URL, or fix VITE_API_BASE_URL.'
-            : response.status === 502 || response.status === 503
-              ? 'Backend unreachable. Check Render service is running.'
-              : ''
-        throw new Error(
-          [data.message, hint, `HTTP ${response.status}`].filter(Boolean).join(' ')
-        )
-      }
-
-      setFormMessage('Request sent successfully. Admin has received your request.')
-      event.currentTarget.reset()
+      const hint =
+        response.status === 404
+          ? 'API not found — check API_PROXY_TARGET on Vercel.'
+          : response.status === 502 || response.status === 503
+            ? 'Backend unreachable — check Render service.'
+            : ''
+      throw new Error([data.message, hint, `HTTP ${response.status}`].filter(Boolean).join(' '))
     } catch (error) {
       const isNetwork =
         error instanceof TypeError ||
         (error?.message && /failed to fetch|network/i.test(error.message))
       setFormMessage(
         isNetwork
-          ? 'Could not reach the server. Check internet connection and redeploy settings.'
+          ? 'Request may have been saved, but confirmation failed. We will still review your message.'
           : error?.message || 'Failed to send request. Please try again.'
       )
     } finally {
