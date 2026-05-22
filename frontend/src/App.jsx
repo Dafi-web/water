@@ -138,14 +138,23 @@ function PublicSite() {
         body: JSON.stringify(payload),
       })
 
+      const data = await response.json().catch(() => ({}))
+
       if (!response.ok) {
-        throw new Error('Request failed')
+        throw new Error(data.message || 'Request failed')
       }
 
       setFormMessage('Request sent successfully. Admin has received your request.')
       event.currentTarget.reset()
-    } catch {
-      setFormMessage('Failed to send request. Please try again.')
+    } catch (error) {
+      const isNetwork =
+        error instanceof TypeError ||
+        (error?.message && /failed to fetch|network/i.test(error.message))
+      setFormMessage(
+        isNetwork
+          ? 'Could not confirm delivery. Your request may still have been saved — we will contact you if needed.'
+          : error?.message || 'Failed to send request. Please try again.'
+      )
     } finally {
       setIsSending(false)
     }

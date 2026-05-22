@@ -33,14 +33,14 @@ function isOriginAllowed(origin) {
   if (!origin) return true;
   if (allowedOrigins.includes(origin)) return true;
   // Allow Vercel production and preview deployments (*.vercel.app)
-  if (/^https:\/\/[\w-]+\.vercel\.app$/.test(origin)) return true;
+  if (/^https:\/\/[\w.-]+\.vercel\.app$/i.test(origin)) return true;
   return false;
 }
 
 app.use(
   cors({
     origin(origin, callback) {
-      if (isOriginAllowed(origin)) return callback(null, true);
+      if (isOriginAllowed(origin)) return callback(null, origin || true);
       return callback(null, false);
     },
     methods: ["GET", "POST", "DELETE", "OPTIONS"],
@@ -91,42 +91,50 @@ app.get("/api/posts", async (_, res) => {
   res.json(posts);
 });
 
-app.post("/api/requests", async (req, res) => {
-  const { name, phone, email = "", projectType, message } = req.body;
-
-  if (!name || !phone || !projectType || !message) {
-    return res.status(400).json({ message: "Please fill all required fields." });
-  }
-
-  const created = await Request.create({ name, phone, email, projectType, message });
-
+async function notifyAdminByEmail({ name, phone, email, projectType, message }) {
   const transporter = getMailTransporter();
   const adminEmail = process.env.ADMIN_EMAIL;
 
-  if (transporter && adminEmail) {
-    try {
-      await transporter.sendMail({
-        from: process.env.SMTP_FROM || process.env.SMTP_USER,
-        to: adminEmail,
-        subject: `New Project Request - ${projectType} - ${name}`,
-        text: [
-          "You received a new request from your website.",
-          "",
-          `Name: ${name}`,
-          `Phone: ${phone}`,
-          `Email: ${email || "Not provided"}`,
-          `Project Type: ${projectType}`,
-          "",
-          "Message:",
-          message,
-        ].join("\n"),
-      });
-    } catch (error) {
-      console.error("Failed to send admin email notification", error);
-    }
-  }
+  if (!transporter || !adminEmail) return;
 
-  res.status(201).json({ id: created._id });
+  await transporter.sendMail({
+    from: process.env.SMTP_FROM || process.env.SMTP_USER,
+    to: adminEmail,
+    subject: `New Project Request - ${projectType} - ${name}`,
+    text: [
+      "You received a new request from your website.",
+      "",
+      `Name: ${name}`,
+      `Phone: ${phone}`,
+      `Email: ${email || "Not provided"}`,
+      `Project Type: ${projectType}`,
+      "",
+      "Message:",
+      message,
+    ].join("\n"),
+  });
+}
+
+app.post("/api/requests", async (req, res) => {
+  try {
+    const { name, phone, email = "", projectType, message } = req.body;
+
+    if (!name || !phone || !projectType || !message) {
+      return res.status(400).json({ message: "Please fill all required fields." });
+    }
+
+    const created = await Request.create({ name, phone, email, projectType, message });
+
+    // Respond immediately so the browser is not blocked by slow/failing SMTP.
+    res.status(201).json({ id: created._id, ok: true });
+
+    void notifyAdminByEmail({ name, phone, email, projectType, message }).catch((error) => {
+      console.error("Failed to send admin email notification", error);
+    });
+  } catch (error) {
+    console.error("Failed to save request", error);
+    res.status(500).json({ message: "Failed to save request." });
+  }
 });
 
 app.get("/api/admin/requests", adminAuth, async (_, res) => {
